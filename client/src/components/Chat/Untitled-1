@@ -1,0 +1,70 @@
+import React, { useState, useEffect } from 'react';
+import queryString from 'query-string';
+import io from 'socket.io-client';
+import TextContainer from '../TextContainer/TextContainer';
+import InfoBar from '../InfoBar/InfoBar';
+import Input from '../Input/Input';
+import Messages from "../Messages/Messages";
+// import './Chat.css';
+import { Row, Col } from 'react-simple-flex-grid';
+import "react-simple-flex-grid/lib/main.css";
+
+let socket;
+
+const Chat = ({ location }) => {
+    const [name, setName] = useState('');
+    const [room, setRoom] = useState('');
+    const [users, setUsers] = useState('');
+    const [message, setMessage] = useState('');
+    const [messages, setMessages] = useState([]);
+    const ENDPOINT = 'https://messengerapplication.herokuapp.com/'
+    useEffect(() => {
+        const { name, room } = queryString.parse(location.search);
+        socket = io(ENDPOINT)
+        setName(name);
+        setRoom(room);
+        socket.emit('join', { name, room }, () => {
+        });
+        return () => {
+            socket.emit('disconnect');
+
+            socket.off();
+        }
+    }, [ENDPOINT, location.search]);
+
+    useEffect(() => {
+        socket.on('message', (message) => {
+            setMessages([...messages, message]);
+        });
+        socket.on('roomData', ({ users }) => {
+            setUsers(users);
+        })
+
+        return () => {
+            socket.emit('disconnect');
+
+            socket.off();
+        }
+    }, [messages]);
+
+    const sendMessage = (event) => {
+        console.log("event", event)
+        event.preventDefault();
+        if (message) {
+            socket.emit('sendMessage', message, () => setMessage(''));
+        }
+    }
+
+    console.log(message, messages);
+    return (
+        <Row gutter={40} style={{ height: "100vh" }}>
+            <Col xs={12} sm={12} md={6} lg={8} xl={10} style={{ backgroundColor: "red", height: "100vh" }}>
+                <div style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+                </div>
+            </Col>
+            <Col xs={12} sm={12} md={6} lg={4} xl={2} style={{ backgroundColor: "blue", height: "100vh" }}>xl-2</Col>
+        </Row>
+    )
+}
+
+export default Chat;
